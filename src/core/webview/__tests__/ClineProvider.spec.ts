@@ -881,6 +881,7 @@ describe("ClineProvider", () => {
 		const profile: ProviderSettingsEntry = { name: "test-config", id: "test-id", apiProvider: "anthropic" }
 
 		;(provider as any).providerSettingsManager = {
+			getConfigScope: vi.fn().mockResolvedValue("global"),
 			getModeConfigId: vi.fn().mockResolvedValue("test-id"),
 			listConfig: vi.fn().mockResolvedValue([profile]),
 			activateProfile: vi.fn().mockResolvedValue(profile),
@@ -893,7 +894,7 @@ describe("ClineProvider", () => {
 
 		// Should load the saved config for architect mode
 		expect(provider.providerSettingsManager.getModeConfigId).toHaveBeenCalledWith("architect")
-		expect(provider.providerSettingsManager.activateProfile).toHaveBeenCalledWith({ name: "test-config" })
+		expect(provider.providerSettingsManager.activateProfile).toHaveBeenCalledWith({ name: "test-config" }, "global")
 		expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "test-config")
 	})
 
@@ -902,6 +903,7 @@ describe("ClineProvider", () => {
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
 		;(provider as any).providerSettingsManager = {
+			getConfigScope: vi.fn().mockResolvedValue("global"),
 			getModeConfigId: vi.fn().mockResolvedValue(undefined),
 			listConfig: vi
 				.fn()
@@ -925,6 +927,7 @@ describe("ClineProvider", () => {
 		const profile: ProviderSettingsEntry = { apiProvider: "anthropic", id: "new-id", name: "new-config" }
 
 		;(provider as any).providerSettingsManager = {
+			getConfigScope: vi.fn().mockResolvedValue("global"),
 			activateProfile: vi.fn().mockResolvedValue(profile),
 			listConfig: vi.fn().mockResolvedValue([profile]),
 			setModeConfig: vi.fn(),
@@ -938,7 +941,7 @@ describe("ClineProvider", () => {
 		await messageHandler({ type: "loadApiConfiguration", text: "new-config" })
 
 		// Should save new config as default for architect mode
-		expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith("architect", "new-id")
+		expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith("architect", "new-id", "global")
 	})
 
 	it("load API configuration by ID works and updates mode config", async () => {
@@ -952,6 +955,7 @@ describe("ClineProvider", () => {
 		}
 
 		;(provider as any).providerSettingsManager = {
+			getConfigScope: vi.fn().mockResolvedValue("global"),
 			activateProfile: vi.fn().mockResolvedValue(profile),
 			listConfig: vi.fn().mockResolvedValue([profile]),
 			setModeConfig: vi.fn(),
@@ -965,10 +969,14 @@ describe("ClineProvider", () => {
 		await messageHandler({ type: "loadApiConfigurationById", text: "config-id-123" })
 
 		// Should save new config as default for architect mode
-		expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith("architect", "config-id-123")
+		expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith(
+			"architect",
+			"config-id-123",
+			"global",
+		)
 
 		// Ensure the `activateProfile` method was called with the correct ID
-		expect(provider.providerSettingsManager.activateProfile).toHaveBeenCalledWith({ id: "config-id-123" })
+		expect(provider.providerSettingsManager.activateProfile).toHaveBeenCalledWith({ id: "config-id-123" }, "global")
 	})
 
 	test("handles showRooIgnoredFiles setting", async () => {
@@ -1122,6 +1130,7 @@ describe("ClineProvider", () => {
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
 		;(provider as any).providerSettingsManager = {
+			getConfigScope: vi.fn().mockResolvedValue("global"),
 			listConfig: vi.fn().mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
 			saveConfig: vi.fn().mockResolvedValue("test-id"),
 			setModeConfig: vi.fn(),
@@ -1468,6 +1477,7 @@ describe("ClineProvider", () => {
 			}
 
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				getModeConfigId: vi.fn().mockResolvedValue("saved-config-id"),
 				listConfig: vi.fn().mockResolvedValue([profile]),
 				activateProfile: vi.fn().mockResolvedValue(profile),
@@ -1483,7 +1493,10 @@ describe("ClineProvider", () => {
 
 			// Verify saved config was loaded
 			expect(provider.providerSettingsManager.getModeConfigId).toHaveBeenCalledWith("architect")
-			expect(provider.providerSettingsManager.activateProfile).toHaveBeenCalledWith({ name: "saved-config" })
+			expect(provider.providerSettingsManager.activateProfile).toHaveBeenCalledWith(
+				{ name: "saved-config" },
+				"global",
+			)
 			expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "saved-config")
 
 			// Verify state was posted to webview
@@ -1492,6 +1505,7 @@ describe("ClineProvider", () => {
 
 		test("saves current config when switching to mode without config", async () => {
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				getModeConfigId: vi.fn().mockResolvedValue(undefined),
 				listConfig: vi
 					.fn()
@@ -1552,6 +1566,7 @@ describe("ClineProvider", () => {
 
 			// Mock provider settings manager
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				getModeConfigId: vi.fn().mockResolvedValue(undefined),
 				listConfig: vi.fn().mockResolvedValue([]),
 			}
@@ -1616,6 +1631,7 @@ describe("ClineProvider", () => {
 
 			// Mock provider settings manager
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				getModeConfigId: vi.fn().mockResolvedValue("config-id"),
 				listConfig: vi
 					.fn()
@@ -1676,6 +1692,7 @@ describe("ClineProvider", () => {
 
 			// Mock provider settings manager
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				getModeConfigId: vi.fn().mockResolvedValue(undefined),
 				listConfig: vi.fn().mockResolvedValue([]),
 			}
@@ -1707,6 +1724,7 @@ describe("ClineProvider", () => {
 
 			// Mock provider settings manager
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				getModeConfigId: vi.fn().mockResolvedValue(undefined),
 				listConfig: vi.fn().mockResolvedValue([]),
 			}
@@ -1751,6 +1769,7 @@ describe("ClineProvider", () => {
 
 			// Mock provider settings manager to throw error
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				getModeConfigId: vi.fn().mockResolvedValue("config-id"),
 				listConfig: vi
 					.fn()
@@ -1851,6 +1870,7 @@ describe("ClineProvider", () => {
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				setModeConfig: vi.fn().mockRejectedValue(new Error("Failed to update mode config")),
 				listConfig: vi
 					.fn()
@@ -1882,6 +1902,7 @@ describe("ClineProvider", () => {
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				setModeConfig: vi.fn(),
 				saveConfig: vi.fn().mockResolvedValue(undefined),
 				listConfig: vi
@@ -1925,6 +1946,7 @@ describe("ClineProvider", () => {
 				throw new Error("API handler error")
 			})
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				setModeConfig: vi.fn(),
 				saveConfig: vi.fn().mockResolvedValue(undefined),
 				listConfig: vi
@@ -1966,6 +1988,7 @@ describe("ClineProvider", () => {
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
 			;(provider as any).providerSettingsManager = {
+				getConfigScope: vi.fn().mockResolvedValue("global"),
 				setModeConfig: vi.fn(),
 				saveConfig: vi.fn().mockResolvedValue(undefined),
 				listConfig: vi
