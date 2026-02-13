@@ -5,9 +5,24 @@ import type { ModelInfo } from "../model.js"
 // https://platform.minimax.io/docs/api-reference/text-openai-api
 // https://platform.minimax.io/docs/api-reference/text-anthropic-api
 export type MinimaxModelId = keyof typeof minimaxModels
-export const minimaxDefaultModelId: MinimaxModelId = "MiniMax-M2"
+export const minimaxDefaultModelId: MinimaxModelId = "MiniMax-M2.5"
 
 export const minimaxModels = {
+	"MiniMax-M2.5": {
+		maxTokens: 131_072,
+		contextWindow: 204_800,
+		supportsImages: false,
+		supportsPromptCache: true,
+		includedTools: ["search_and_replace"],
+		excludedTools: ["apply_diff"],
+		preserveReasoning: true,
+		inputPrice: 0.3,
+		outputPrice: 1.2,
+		cacheWritesPrice: 0.375,
+		cacheReadsPrice: 0.03,
+		description:
+			"MiniMax M2.5, a frontier model with 204K context window and 131K max output, offering top-tier coding and agentic performance with ultimate cost-effectiveness.",
+	},
 	"MiniMax-M2": {
 		maxTokens: 16_384,
 		contextWindow: 192_000,
@@ -57,5 +72,5 @@ export const minimaxModels = {
 
 export const minimaxDefaultModelInfo: ModelInfo = minimaxModels[minimaxDefaultModelId]
 
-export const MINIMAX_DEFAULT_MAX_TOKENS = 16_384
+export const MINIMAX_DEFAULT_MAX_TOKENS = 131_072
 export const MINIMAX_DEFAULT_TEMPERATURE = 1.0

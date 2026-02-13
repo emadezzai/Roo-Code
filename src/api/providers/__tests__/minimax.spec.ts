@@ -201,7 +201,7 @@ describe("MiniMaxHandler", () => {
 		it("returns default model when no model ID is specified", () => {
 			const handler = createHandler()
 			const model = handler.getModel()
-			expect(model.id).toBe("MiniMax-M2")
+			expect(model.id).toBe("MiniMax-M2.5")
 			expect(model.temperature).toBe(1)
 		})
 
@@ -234,7 +234,7 @@ describe("MiniMaxHandler", () => {
 			const handler = createHandler()
 			const chunks = await collectChunks(handler.createMessage(systemPrompt, messages))
 
-			expect(mockModel).toHaveBeenCalledWith("MiniMax-M2")
+			expect(mockModel).toHaveBeenCalledWith("MiniMax-M2.5")
 			expect(mockStreamText).toHaveBeenCalledWith(
 				expect.objectContaining({
 					model: "mock-model-instance",
@@ -372,7 +372,7 @@ describe("MiniMaxHandler", () => {
 			const result = await handler.completePrompt("test prompt")
 
 			expect(result).toBe("response")
-			expect(mockModel).toHaveBeenCalledWith("MiniMax-M2")
+			expect(mockModel).toHaveBeenCalledWith("MiniMax-M2.5")
 			expect(mockGenerateText).toHaveBeenCalledWith(
 				expect.objectContaining({
 					model: "mock-model-instance",
