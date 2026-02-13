@@ -46,6 +46,7 @@ export enum TaskCommandName {
 	CloseTask = "CloseTask",
 	ResumeTask = "ResumeTask",
 	SendMessage = "SendMessage",
+	DeleteQueuedMessage = "DeleteQueuedMessage",
 }
 
 /**
@@ -80,6 +81,10 @@ export const taskCommandSchema = z.discriminatedUnion("commandName", [
 			text: z.string().optional(),
 			images: z.array(z.string()).optional(),
 		}),
+	}),
+	z.object({
+		commandName: z.literal(TaskCommandName.DeleteQueuedMessage),
+		data: z.string(), // messageId
 	}),
 ])
 
