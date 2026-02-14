@@ -46,7 +46,7 @@ export const CheckpointRestoreDialog: React.FC<CheckpointRestoreDialogProps> = (
 
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
-			<AlertDialogContent>
+			<AlertDialogContent dir="auto">
 				<AlertDialogHeader>
 					<AlertDialogTitle className="text-lg">{title}</AlertDialogTitle>
 					<AlertDialogDescription className="text-base">{description}</AlertDialogDescription>

@@ -29,5 +29,5 @@ export const Mention = ({ text, withShadow = false }: MentionProps) => {
 		}
 	})
 
-	return <>{parts}</>
+	return <span dir="auto">{parts}</span>
 }

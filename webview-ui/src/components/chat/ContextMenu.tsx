@@ -267,6 +267,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
 	return (
 		<div
+			dir="auto"
 			style={{
 				position: "absolute",
 				bottom: "calc(100% - 10px)",

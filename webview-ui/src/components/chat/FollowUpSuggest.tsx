@@ -108,7 +108,7 @@ export const FollowUpSuggest = ({
 	}
 
 	return (
-		<div className="flex mb-2 flex-col h-full gap-2">
+		<div dir="auto" className="flex mb-2 flex-col h-full gap-2">
 			{suggestions.map((suggestion, index) => {
 				const isFirstSuggestion = index === 0
 
@@ -129,13 +129,17 @@ export const FollowUpSuggest = ({
 							{suggestion.answer}
 						</Button>
 						{isFirstSuggestion && countdown !== null && !suggestionSelected && !isAnswered && (
-							<p className="rounded-b-xl border-1 border-t-0 border-vscode-foreground/60 text-vscode-descriptionForeground text-xs m-0 mt-1 px-3 pt-2 pb-2">
+							<p
+								dir="auto"
+								className="rounded-b-xl border-1 border-t-0 border-vscode-foreground/60 text-vscode-descriptionForeground text-xs m-0 mt-1 px-3 pt-2 pb-2">
 								<Timer className="size-3 inline-block -mt-0.5 mr-1 animate-pulse" />
 								{t("chat:followUpSuggest.timerPrefix", { seconds: countdown })}
 							</p>
 						)}
 						{suggestion.mode && (
-							<div className="absolute bottom-0 right-0 text-[10px] text-vscode-badge-foreground pl-1 pr-2.5 pt-0.5 pb-1.5 flex items-center gap-0.5 bg-transparent rounded-xl">
+							<div
+								dir="auto"
+								className="absolute bottom-0 right-0 text-[10px] text-vscode-badge-foreground pl-1 pr-2.5 pt-0.5 pb-1.5 flex items-center gap-0.5 bg-transparent rounded-xl">
 								<span className="codicon codicon-arrow-right" style={{ fontSize: "8px" }} />
 								{suggestion.mode}
 							</div>

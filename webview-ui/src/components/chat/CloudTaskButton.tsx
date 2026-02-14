@@ -84,43 +84,45 @@ export const CloudTaskButton = ({ item, disabled = false }: CloudTaskButtonProps
 
 	return (
 		<>
-			<LucideIconButton
-				icon={CloudUploadIcon}
-				disabled={disabled}
-				data-testid="cloud-task-button"
-				title={t("chat:task.openInCloud")}
-				onClick={() => setDialogOpen(true)}></LucideIconButton>
+			<div dir="auto">
+				<LucideIconButton
+					icon={CloudUploadIcon}
+					disabled={disabled}
+					data-testid="cloud-task-button"
+					title={t("chat:task.openInCloud")}
+					onClick={() => setDialogOpen(true)}></LucideIconButton>
 
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent className="max-w-100">
-					<DialogHeader>
-						<DialogTitle>{t("chat:task.openInCloud")}</DialogTitle>
-					</DialogHeader>
+				<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+					<DialogContent className="max-w-100">
+						<DialogHeader>
+							<DialogTitle>{t("chat:task.openInCloud")}</DialogTitle>
+						</DialogHeader>
 
-					<div className="flex flex-col space-y-4">
-						<p className="text-center md:text-left max-w-80">{t("chat:task.openInCloudIntro")}</p>
-						<div className="flex justify-center md:justify-start">
-							<div
-								className="w-[170px] h-[170px] bg-white rounded-lg border-border cursor-pointer hover:opacity-70 transition-opacity"
-								onClick={() => vscode.postMessage({ type: "openExternal", url: cloudTaskUrl })}
-								title={t("chat:task.openInCloud")}>
-								<canvas ref={canvasRef} className="m-[15px]" />
+						<div className="flex flex-col space-y-4">
+							<p className="text-center md:text-left max-w-80">{t("chat:task.openInCloudIntro")}</p>
+							<div className="flex justify-center md:justify-start">
+								<div
+									className="w-[170px] h-[170px] bg-white rounded-lg border-border cursor-pointer hover:opacity-70 transition-opacity"
+									onClick={() => vscode.postMessage({ type: "openExternal", url: cloudTaskUrl })}
+									title={t("chat:task.openInCloud")}>
+									<canvas ref={canvasRef} className="m-[15px]" />
+								</div>
+							</div>
+
+							<div className="flex items-center space-x-2">
+								<Input value={cloudTaskUrl} disabled className="flex-1 font-mono text-sm" readOnly />
+								<Button
+									variant="outline"
+									size="icon"
+									onClick={(e) => copyWithFeedback(cloudTaskUrl, e)}
+									className="h-9 w-9">
+									{showCopyFeedback ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+								</Button>
 							</div>
 						</div>
-
-						<div className="flex items-center space-x-2">
-							<Input value={cloudTaskUrl} disabled className="flex-1 font-mono text-sm" readOnly />
-							<Button
-								variant="outline"
-								size="icon"
-								onClick={(e) => copyWithFeedback(cloudTaskUrl, e)}
-								className="h-9 w-9">
-								{showCopyFeedback ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+					</DialogContent>
+				</Dialog>
+			</div>
 		</>
 	)
 }

@@ -25,7 +25,7 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 	const { debug } = useExtensionState()
 
 	return (
-		<div className="flex flex-row items-center -ml-0.5 mt-1 gap-1">
+		<div dir="auto" className="flex flex-row items-center -ml-0.5 mt-1 gap-1">
 			<LucideIconButton
 				icon={DownloadIcon}
 				title={t("chat:task.export")}

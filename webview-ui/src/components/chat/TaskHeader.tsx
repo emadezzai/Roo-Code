@@ -151,7 +151,7 @@ const TaskHeader = ({
 	}
 
 	return (
-		<div className="group pt-2 pb-0 px-3">
+		<div dir="auto" className="group pt-2 pb-0 px-3">
 			{isSubtask && (
 				<div className="mb-2" onClick={(e) => e.stopPropagation()}>
 					<Button

@@ -146,7 +146,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 	return (
 		<>
-			<div className="flex flex-row items-center justify-between gap-2 mb-1">
+			<div dir="auto" className="flex flex-row items-center justify-between gap-2 mb-1">
 				<div className="flex flex-row items-center gap-2">
 					{icon}
 					{title}

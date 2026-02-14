@@ -63,7 +63,7 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 	}
 
 	return (
-		<div className="border-t border-vscode-panel-border/50 bg-vscode-sideBar-background/30">
+		<div dir="auto" className="border-t border-vscode-panel-border/50 bg-vscode-sideBar-background/30">
 			<button
 				onClick={() => setIsExpanded(!isExpanded)}
 				className="w-full px-3 py-2 flex items-center justify-between hover:bg-vscode-list-hoverBackground transition-colors">
