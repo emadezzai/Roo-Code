@@ -118,6 +118,102 @@ describe("MiniMaxHandler", () => {
 			expect(model.info.cacheWritesPrice).toBe(0.375)
 			expect(model.info.cacheReadsPrice).toBe(0.03)
 		})
+
+		it("should return MiniMax-M2.1 model with correct configuration", () => {
+			const testModelId: MinimaxModelId = "MiniMax-M2.1"
+			const handlerWithModel = new MiniMaxHandler({
+				apiModelId: testModelId,
+				minimaxApiKey: "test-minimax-api-key",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(minimaxModels[testModelId])
+			expect(model.info.contextWindow).toBe(192_000)
+			expect(model.info.maxTokens).toBe(16_384)
+			expect(model.info.supportsPromptCache).toBe(true)
+			expect(model.info.cacheWritesPrice).toBe(0.375)
+			expect(model.info.cacheReadsPrice).toBe(0.03)
+		})
+
+		it("should return MiniMax-M2.5 model with correct configuration", () => {
+			const testModelId: MinimaxModelId = "MiniMax-M2.5"
+			const handlerWithModel = new MiniMaxHandler({
+				apiModelId: testModelId,
+				minimaxApiKey: "test-minimax-api-key",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(minimaxModels[testModelId])
+			expect(model.info.contextWindow).toBe(192_000)
+			expect(model.info.maxTokens).toBe(16_384)
+			expect(model.info.supportsPromptCache).toBe(true)
+			expect(model.info.cacheWritesPrice).toBe(0.375)
+			expect(model.info.cacheReadsPrice).toBe(0.03)
+		})
+
+		it("should return MiniMax-M2.5-128k model with correct configuration", () => {
+			const testModelId: MinimaxModelId = "MiniMax-M2.5-128k"
+			const handlerWithModel = new MiniMaxHandler({
+				apiModelId: testModelId,
+				minimaxApiKey: "test-minimax-api-key",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(minimaxModels[testModelId])
+			expect(model.info.contextWindow).toBe(128_000)
+			expect(model.info.maxTokens).toBe(32_768)
+			expect(model.info.supportsPromptCache).toBe(true)
+			expect(model.info.cacheWritesPrice).toBe(0.375)
+			expect(model.info.cacheReadsPrice).toBe(0.03)
+		})
+
+		it("should return MiniMax-M2.5-Lite model with correct configuration", () => {
+			const testModelId: MinimaxModelId = "MiniMax-M2.5-Lite"
+			const handlerWithModel = new MiniMaxHandler({
+				apiModelId: testModelId,
+				minimaxApiKey: "test-minimax-api-key",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(minimaxModels[testModelId])
+			expect(model.info.contextWindow).toBe(192_000)
+			expect(model.info.maxTokens).toBe(8_192)
+			expect(model.info.supportsPromptCache).toBe(false)
+			expect(model.info.cacheWritesPrice).toBe(0)
+			expect(model.info.cacheReadsPrice).toBe(0)
+		})
+
+		it("should return MiniMax-M2.5-Pro model with correct configuration", () => {
+			const testModelId: MinimaxModelId = "MiniMax-M2.5-Pro"
+			const handlerWithModel = new MiniMaxHandler({
+				apiModelId: testModelId,
+				minimaxApiKey: "test-minimax-api-key",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(minimaxModels[testModelId])
+			expect(model.info.contextWindow).toBe(192_000)
+			expect(model.info.maxTokens).toBe(32_768)
+			expect(model.info.supportsPromptCache).toBe(true)
+			expect(model.info.cacheWritesPrice).toBe(0.75)
+			expect(model.info.cacheReadsPrice).toBe(0.06)
+		})
+
+		it("should return MiniMax-M2.5-Thinking model with correct configuration", () => {
+			const testModelId: MinimaxModelId = "MiniMax-M2.5-Thinking"
+			const handlerWithModel = new MiniMaxHandler({
+				apiModelId: testModelId,
+				minimaxApiKey: "test-minimax-api-key",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(minimaxModels[testModelId])
+			expect(model.info.contextWindow).toBe(192_000)
+			expect(model.info.maxTokens).toBe(16_384)
+			expect(model.info.supportsPromptCache).toBe(true)
+			expect(model.info.cacheWritesPrice).toBe(0.375)
+			expect(model.info.cacheReadsPrice).toBe(0.03)
+		})
 	})
 
 	describe("China MiniMax", () => {
