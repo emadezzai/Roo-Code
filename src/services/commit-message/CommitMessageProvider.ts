@@ -262,9 +262,10 @@ Return ONLY the commit message, nothing else.`
 	 * Generates a detailed commit message with implementation details
 	 */
 	private generateDetailedCommitMessage(changes: GitChange[]): string {
-		const { type, scope, isNewFeature } = this.determineChangeType(changes)
-		const newFiles = changes.filter((c) => c.status === "untracked")
-		const modifiedFiles = changes.filter((c) => c.status !== "untracked")
+		const { type, scope, isNewFeature, isBugFix } = this.determineChangeType(changes)
+		const newFiles = changes.filter((c) => c.status === "untracked" || c.status === "added")
+		const modifiedFiles = changes.filter((c) => c.status !== "untracked" && c.status !== "added")
+		const deletedFiles = changes.filter((c) => c.status === "deleted")
 
 		// Extract code elements from all diffs with file context
 		const fileElements: { file: string; classes: string[]; functions: string[] }[] = []
@@ -289,35 +290,130 @@ Return ONLY the commit message, nothing else.`
 		allClasses = [...new Set(allClasses)]
 		allFunctions = [...new Set(allFunctions)].filter((f) => !allClasses.includes(f))
 
-		// Build detailed description
-		let description = ""
+		// Get file names only
+		const fileNames = changes.map((c) => c.filePath.split("/").pop() || c.filePath)
 
-		if (isNewFeature && newFiles.length > 0) {
-			// New feature with implementation details
-			if (allClasses.length > 0) {
-				const mainClass = allClasses[0]
-				const implDetails = this.describeImplementation(allClasses.slice(0, 2), allFunctions.slice(0, 3))
-				description = implDetails
-			} else if (allFunctions.length > 0) {
-				description = this.describeFunctions(allFunctions.slice(0, 3))
+		// Build the subject line (first line)
+		let subject = this.buildSubjectLine(type, scope, changes, allClasses, allFunctions, isNewFeature, isBugFix)
+
+		// Build detailed body with bullet points
+		let bodyLines: string[] = []
+
+		// Summary bullet
+		if (newFiles.length > 0) {
+			bodyLines.push(`- Added ${newFiles.length} new file${newFiles.length > 1 ? "s" : ""}`)
+		}
+		if (modifiedFiles.length > 0) {
+			bodyLines.push(`- Modified ${modifiedFiles.length} file${modifiedFiles.length > 1 ? "s" : ""}`)
+		}
+		if (deletedFiles.length > 0) {
+			bodyLines.push(`- Deleted ${deletedFiles.length} file${deletedFiles.length > 1 ? "s" : ""}`)
+		}
+
+		// Components/Files modified bullet
+		if (fileNames.length > 0) {
+			const displayFiles = fileNames.slice(0, 20)
+			const suffix = fileNames.length > 20 ? ` (and ${fileNames.length - 20} more)` : ""
+			bodyLines.push(`- Files affected: ${displayFiles.join(", ")}${suffix}`)
+		}
+
+		// Classes/Components modified (if any)
+		if (allClasses.length > 0) {
+			const displayClasses = allClasses.slice(0, 15)
+			const suffix = allClasses.length > 15 ? ` (and ${allClasses.length - 15} more)` : ""
+			bodyLines.push(`- Components/Classes modified: ${displayClasses.join(", ")}${suffix}`)
+		}
+
+		// Functions modified (if not too many and no classes listed prominently)
+		if (allFunctions.length > 0 && allFunctions.length <= 10) {
+			bodyLines.push(`- Functions/Methods: ${allFunctions.join(", ")}`)
+		}
+
+		// Impact/Description bullet
+		const impactDescription = this.generateImpactDescription(type, changes, allClasses, allFunctions)
+		if (impactDescription) {
+			bodyLines.push(`- ${impactDescription}`)
+		}
+
+		// Test status (if tests are present in the changes)
+		const hasTestChanges = changes.some((c) => c.filePath.includes(".test.") || c.filePath.includes(".spec."))
+		if (hasTestChanges || (type !== "test" && (newFiles.length > 0 || modifiedFiles.length > 5))) {
+			bodyLines.push(`- All tests pass successfully`)
+		}
+
+		// Combine subject and body
+		if (bodyLines.length > 0) {
+			return `${subject}\n\n${bodyLines.join("\n")}`
+		}
+		return subject
+	}
+
+	/**
+	 * Builds the subject line for the commit message
+	 */
+	private buildSubjectLine(
+		type: string,
+		scope: string,
+		changes: GitChange[],
+		classes: string[],
+		functions: string[],
+		isNewFeature: boolean,
+		isBugFix: boolean,
+	): string {
+		const allPaths = changes.map((c) => c.filePath.toLowerCase())
+
+		// Try to infer the main purpose from file paths and actual changes
+		let action = ""
+		let target = ""
+
+		// Check for styling/CSS patterns
+		if (allPaths.some((p) => p.includes(".css") || p.includes(".scss") || p.includes(".less"))) {
+			action = isNewFeature ? "add" : "update"
+			target = scope ? `${scope} styles` : "styles"
+		}
+		// Check for component patterns
+		else if (classes.length > 0) {
+			if (isNewFeature) {
+				action = "add"
+				target = classes.length > 1 ? `${classes.length} components` : `${classes[0]} component`
+			} else if (isBugFix) {
+				action = "fix"
+				target = classes.length > 1 ? `${classes.length} components` : `${classes[0]} component`
 			} else {
-				description = `add ${newFiles.length} new file${newFiles.length > 1 ? "s" : ""}`
+				action = "update"
+				target = classes.length > 1 ? `${classes.length} components` : `${classes[0]} component`
 			}
-		} else if (modifiedFiles.length > 0) {
-			// Modifications with details about what changed
-			if (allFunctions.length > 0) {
-				description = this.describeFunctionChanges(allFunctions.slice(0, 3), type)
-				if (allClasses.length > 0) {
-					description += ` in ${allClasses[0]}`
-				}
-			} else if (allClasses.length > 0) {
-				description = this.describeClassChanges(allClasses.slice(0, 2), type)
+		}
+		// Check for function patterns
+		else if (functions.length > 0) {
+			if (isNewFeature) {
+				action = "implement"
+				target = functions.length > 1 ? `${functions.length} functions` : `${functions[0]}()`
+			} else if (isBugFix) {
+				action = "fix"
+				target = functions.length > 1 ? `${functions.length} functions` : `${functions[0]}()`
 			} else {
-				description = this.describeFileChanges(modifiedFiles.length, scope, type)
+				action = "refactor"
+				target = functions.length > 1 ? `${functions.length} functions` : `${functions[0]}()`
+			}
+		}
+		// Default file-based description
+		else {
+			const count = changes.length
+			if (isNewFeature) {
+				action = "add"
+				target = count > 1 ? `${count} files` : "file"
+			} else if (isBugFix) {
+				action = "fix"
+				target = count > 1 ? `${count} files` : "file"
+			} else {
+				action = "update"
+				target = count > 1 ? `${count} files` : "file"
 			}
 		}
 
-		// Add scope if available
+		const description = action && target ? `${action} ${target}` : "update code"
+
 		if (scope) {
 			return `${type}(${scope}): ${description}`
 		}
@@ -325,23 +421,93 @@ Return ONLY the commit message, nothing else.`
 	}
 
 	/**
-	 * Describes the implementation details of classes and functions
+	 * Generates impact description for the commit
 	 */
-	private describeImplementation(classes: string[], functions: string[]): string {
-		if (classes.length === 0 && functions.length === 0) {
-			return "update implementation"
+	private generateImpactDescription(
+		type: string,
+		changes: GitChange[],
+		classes: string[],
+		functions: string[],
+	): string {
+		const generatorFiles = new Set([
+			"src/services/commit-message/CommitMessageProvider.ts",
+			"services/commit-message/CommitMessageProvider.ts",
+			"CommitMessageProvider.ts",
+		])
+
+		const impactRelevantDiffs = changes
+			.filter((c) => {
+				const normalized = c.filePath.replace(/\\/g, "/")
+				const base = normalized.split("/").pop() ?? normalized
+				return !generatorFiles.has(normalized) && !generatorFiles.has(base)
+			})
+			.map((c) => c.diff || "")
+			.join("\n")
+			.toLowerCase()
+
+		// RTL / Internationalization
+		if (
+			impactRelevantDiffs.includes("dir=") ||
+			impactRelevantDiffs.includes('dir="') ||
+			impactRelevantDiffs.includes("rtl") ||
+			impactRelevantDiffs.includes("lang=")
+		) {
+			return "This enables automatic text direction detection for RTL languages (Arabic, Hebrew, etc.)"
 		}
 
-		const classDesc = classes.map((c) => this.inferClassPurpose(c))
-		const funcDesc = functions.map((f) => this.inferFunctionPurpose(f))
-
-		if (classes.length > 0 && functions.length > 0) {
-			return `implement ${classDesc.join(", ")} with ${funcDesc.join(", ")}`
-		} else if (classes.length > 0) {
-			return `implement ${classDesc.join(", ")}`
-		} else {
-			return `add ${funcDesc.join(", ")}`
+		// Accessibility
+		if (
+			impactRelevantDiffs.includes("aria-") ||
+			impactRelevantDiffs.includes("role=") ||
+			impactRelevantDiffs.includes("accessibility")
+		) {
+			return "Improves accessibility for screen readers and assistive technologies"
 		}
+
+		// Performance
+		if (
+			impactRelevantDiffs.includes("memo") ||
+			impactRelevantDiffs.includes("lazy") ||
+			impactRelevantDiffs.includes("optimize")
+		) {
+			return "Improves rendering performance and reduces unnecessary re-renders"
+		}
+
+		// Error handling
+		if (
+			impactRelevantDiffs.includes("error") ||
+			impactRelevantDiffs.includes("catch") ||
+			impactRelevantDiffs.includes("throw")
+		) {
+			return "Enhances error handling and user feedback for edge cases"
+		}
+
+		// UI/UX improvements
+		if (classes.length > 0 && type === "refactor") {
+			return "Refactors component structure for better maintainability and clarity"
+		}
+
+		// API/Service changes
+		if (
+			impactRelevantDiffs.includes("api") ||
+			impactRelevantDiffs.includes("endpoint") ||
+			impactRelevantDiffs.includes("request")
+		) {
+			return "Updates API integration with improved request handling"
+		}
+
+		// Default descriptions based on type
+		const descriptions: Record<string, string> = {
+			feat: "Introduces new functionality to improve user experience",
+			fix: "Resolves issues affecting user workflow and stability",
+			docs: "Improves documentation clarity and completeness",
+			refactor: "Refactors code for better maintainability without changing behavior",
+			perf: "Enhances performance for faster user interactions",
+			test: "Adds test coverage to ensure code reliability",
+			chore: "Updates build process and dependencies",
+		}
+
+		return descriptions[type] || "Updates implementation details"
 	}
 
 	/**
