@@ -3141,6 +3141,11 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "openBrowserPanel": {
+			const { ElementPickerBrowser } = await import("../../services/browser/BrowserPanel")
+			await ElementPickerBrowser.launch()
+			break
+		}
 		case "showMdmAuthRequiredNotification": {
 			// Show notification that organization requires authentication
 			vscode.window.showWarningMessage(t("common:mdm.info.organization_requires_auth"))

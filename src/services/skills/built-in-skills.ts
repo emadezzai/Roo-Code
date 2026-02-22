@@ -5,7 +5,7 @@
  * in the built-in/ directory. To modify built-in skills, edit the corresponding
  * SKILL.md file and run: pnpm generate:skills
  *
- * Generated at: 2026-02-15T17:05:26.565Z
+ * Generated at: 2026-02-21T23:49:26.261Z
  */
 
 import { SkillMetadata, SkillContent } from "../../shared/skills"

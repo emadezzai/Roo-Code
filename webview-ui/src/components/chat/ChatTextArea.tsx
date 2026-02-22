@@ -1,7 +1,7 @@
 import React, { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useEvent } from "react-use"
 import DynamicTextArea from "react-textarea-autosize"
-import { VolumeX, Image, WandSparkles, SendHorizontal, X, ListEnd, Square } from "lucide-react"
+import { VolumeX, Image, WandSparkles, SendHorizontal, X, ListEnd, Square, Globe } from "lucide-react"
 
 import type { ExtensionMessage } from "@roo-code/types"
 
@@ -190,6 +190,20 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							}
 						}, 0)
 					}
+				} else if (message.type === "insertTextToChatArea") {
+					// Handle text and images from element picker
+					if (message.text) {
+						const newValue = inputValue ? inputValue + "\n" + message.text : message.text
+						setInputValue(newValue)
+					}
+					if (message.images && message.images.length > 0) {
+						setSelectedImages((prev: string[]) => [...prev, ...message.images])
+					}
+					setTimeout(() => {
+						if (textAreaRef.current) {
+							textAreaRef.current.focus()
+						}
+					}, 0)
 				} else if (message.type === "commitSearchResults") {
 					const commits = message.commits.map((commit: any) => ({
 						type: ContextMenuOptionType.Git,
@@ -210,7 +224,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 			window.addEventListener("message", messageHandler)
 			return () => window.removeEventListener("message", messageHandler)
-		}, [setInputValue, searchRequestId, inputValue])
+		}, [setInputValue, setSelectedImages, searchRequestId, inputValue])
 
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		const [textAreaBaseHeight, setTextAreaBaseHeight] = useState<number | undefined>(undefined)
@@ -1346,6 +1360,26 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							</StandardTooltip>
 						)}
 						{!isEditMode ? <IndexingStatusBadge /> : null}
+						{!isEditMode && (
+							<StandardTooltip content="Open Browser Panel">
+								<button
+									aria-label="Open Browser Panel"
+									onClick={() => vscode.postMessage({ type: "openBrowserPanel" })}
+									className={cn(
+										"relative inline-flex items-center justify-center",
+										"bg-transparent border-none p-1.5",
+										"rounded-md min-w-[28px] min-h-[28px]",
+										"text-vscode-foreground opacity-85",
+										"transition-all duration-150",
+										"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										"active:bg-[rgba(255,255,255,0.1)]",
+										"cursor-pointer",
+									)}>
+									<Globe className="w-4 h-4" />
+								</button>
+							</StandardTooltip>
+						)}
 						{!isEditMode && cloudUserInfo && <CloudAccountSwitcher />}
 						{/* keep props referenced after moving browser button */}
 						<div

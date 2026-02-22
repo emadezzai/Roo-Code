@@ -105,6 +105,10 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 		return openClineInNewTab({ context, outputChannel })
 	},
 	openInNewTab: () => openClineInNewTab({ context, outputChannel }),
+	openBrowserPanel: async () => {
+		const { ElementPickerBrowser } = await import("../services/browser/BrowserPanel")
+		await ElementPickerBrowser.launch()
+	},
 	settingsButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 
