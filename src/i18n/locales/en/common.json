@@ -252,5 +252,19 @@
 	"docsLink": {
 		"label": "Docs",
 		"url": "https://docs.roocode.com"
+	},
+	"commitMessage": {
+		"activated": "Roo Code commit message generator activated",
+		"gitNotFound": "⚠️ Git repository not found or git not available",
+		"gitInitError": "⚠️ Git initialization error: {{error}}",
+		"generating": "Roo: Generating commit message...",
+		"analyzingChanges": "Roo: Analyzing staged changes...",
+		"noStagedChangesRepo": "Roo: No staged changes found in git repository",
+		"noStagedChanges": "Roo: No staged changes found to analyze",
+		"generated": "Roo: Commit message generated!",
+		"generationFailed": "Roo: Failed to generate commit message: {{errorMessage}}",
+		"tokenRequired": "Roo Code token is required for commit message generation",
+		"activationFailed": "Roo: Failed to activate commit message provider: {{error}}",
+		"providerRegistered": "Roo: Commit message provider registered"
 	}
 }

@@ -3585,6 +3585,18 @@ export const webviewMessageHandler = async (
 			break
 		}
 
+		case "generateCommitMessage": {
+			try {
+				// Execute the VS Code command to generate commit message
+				await vscode.commands.executeCommand("roo-code.generateCommitMessage")
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Error generating commit message: ${errorMessage}`)
+				vscode.window.showErrorMessage(`Failed to generate commit message: ${errorMessage}`)
+			}
+			break
+		}
+
 		default: {
 			// console.log(`Unhandled message type: ${message.type}`)
 			//

@@ -498,5 +498,9 @@
 	},
 	"readCommandOutput": {
 		"title": "Roo read command output"
+	},
+	"commitButton": {
+		"label": "Generate Commit",
+		"tooltip": "Generate AI commit message for staged changes"
 	}
 }
