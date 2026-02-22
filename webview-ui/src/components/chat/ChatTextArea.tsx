@@ -27,6 +27,7 @@ import { StandardTooltip } from "@src/components/ui"
 import Thumbnails from "../common/Thumbnails"
 import { ModeSelector } from "./ModeSelector"
 import { ApiConfigSelector } from "./ApiConfigSelector"
+import { ModelSelector } from "./ModelSelector"
 import { AutoApproveDropdown } from "./AutoApproveDropdown"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
@@ -103,6 +104,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			commands,
 			cloudUserInfo,
 			enterBehavior,
+			routerModels, // get routerModels from useExtensionState
+			apiConfiguration, // get apiConfiguration from useExtensionState
 		} = useExtensionState()
 
 		// Find the ID and display text for the currently selected API configuration.
@@ -113,6 +116,85 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				displayName: currentApiConfigName || "", // Use the name directly for display.
 			}
 		}, [listApiConfigMeta, currentApiConfigName])
+
+		// Get models for current provider
+		const currentProvider = apiConfiguration?.apiProvider || "anthropic"
+		const currentProviderModels = useMemo(() => {
+			if (!routerModels) return {}
+			return routerModels[currentProvider as keyof typeof routerModels] || {}
+		}, [routerModels, currentProvider])
+
+		// Get current model ID based on provider
+		const currentModelId = useMemo(() => {
+			switch (currentProvider) {
+				case "openrouter":
+					return apiConfiguration?.openRouterModelId || ""
+				case "requesty":
+					return apiConfiguration?.requestyModelId || ""
+				case "unbound":
+					return apiConfiguration?.unboundModelId || ""
+				case "litellm":
+					return apiConfiguration?.litellmModelId || ""
+				case "deepinfra":
+					return apiConfiguration?.deepInfraModelId || ""
+				case "chutes":
+					return apiConfiguration?.apiModelId || ""
+				case "ollama":
+					return apiConfiguration?.ollamaModelId || ""
+				case "lmstudio":
+					return apiConfiguration?.lmStudioModelId || ""
+				case "roo":
+					return apiConfiguration?.apiModelId || ""
+				case "io-intelligence":
+					return apiConfiguration?.ioIntelligenceModelId || ""
+				case "vercel-ai-gateway":
+					return apiConfiguration?.vercelAiGatewayModelId || ""
+				default:
+					return apiConfiguration?.apiModelId || ""
+			}
+		}, [currentProvider, apiConfiguration])
+
+		// Handle model selection
+		const handleModelSelect = useCallback(
+			(modelId: string) => {
+				if (!currentProvider || !currentApiConfigName) return
+
+				const message: WebviewMessage = {
+					type: "saveApiConfiguration",
+					text: currentApiConfigName,
+					apiConfiguration: {
+						...apiConfiguration,
+						apiProvider: currentProvider,
+						...(currentProvider === "openrouter" && { openRouterModelId: modelId }),
+						...(currentProvider === "requesty" && { requestyModelId: modelId }),
+						...(currentProvider === "unbound" && { unboundModelId: modelId }),
+						...(currentProvider === "litellm" && { litellmModelId: modelId }),
+						...(currentProvider === "deepinfra" && { deepInfraModelId: modelId }),
+						...(currentProvider === "chutes" && { apiModelId: modelId }),
+						...(currentProvider === "ollama" && { ollamaModelId: modelId }),
+						...(currentProvider === "lmstudio" && { lmStudioModelId: modelId }),
+						...(currentProvider === "roo" && { apiModelId: modelId }),
+						...(currentProvider === "io-intelligence" && { ioIntelligenceModelId: modelId }),
+						...(currentProvider === "vercel-ai-gateway" && { vercelAiGatewayModelId: modelId }),
+						...(![
+							"openrouter",
+							"requesty",
+							"unbound",
+							"litellm",
+							"deepinfra",
+							"chutes",
+							"ollama",
+							"lmstudio",
+							"roo",
+							"io-intelligence",
+							"vercel-ai-gateway",
+						].includes(currentProvider) && { apiModelId: modelId }),
+					},
+				}
+				vscode.postMessage(message)
+			},
+			[currentProvider, apiConfiguration, currentApiConfigName],
+		)
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
 		const [showDropdown, setShowDropdown] = useState(false)
@@ -1331,6 +1413,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							listApiConfigMeta={listApiConfigMeta || []}
 							pinnedApiConfigs={pinnedApiConfigs}
 							togglePinnedApiConfig={togglePinnedApiConfig}
+						/>
+						<ModelSelector
+							models={currentProviderModels}
+							currentModelId={currentModelId}
+							onSelect={handleModelSelect}
+							disabled={selectApiConfigDisabled}
 						/>
 						<AutoApproveDropdown triggerClassName="min-w-[28px] text-ellipsis overflow-hidden flex-shrink" />
 					</div>

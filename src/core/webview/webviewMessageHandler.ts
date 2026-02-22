@@ -1860,6 +1860,10 @@ export const webviewMessageHandler = async (
 					await provider.providerSettingsManager.saveConfig(message.text, message.apiConfiguration)
 					const listApiConfig = await provider.providerSettingsManager.listConfig()
 					await updateGlobalState("listApiConfigMeta", listApiConfig)
+					// Update the context proxy with the new settings so the state reflects the change
+					await provider.contextProxy.setProviderSettings(message.apiConfiguration)
+					// Update the webview state to reflect the new model selection
+					await provider.postStateToWebview()
 				} catch (error) {
 					provider.log(
 						`Error save api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
