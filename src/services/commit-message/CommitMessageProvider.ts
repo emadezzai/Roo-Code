@@ -68,9 +68,15 @@ export class CommitMessageProvider {
 					}
 
 					const gitContextString = this.gitService.getCommitContext(changes)
+					const detailedContext = changes
+						.map((c) => {
+							const fileName = c.filePath.split("/").pop() || c.filePath
+							return `${fileName} (${c.status})\n${c.diff || ""}`
+						})
+						.join("\n\n")
 					progress.report({ increment: 50, message: t("common:commitMessage.generating") })
 
-					const generatedMessage = await this.callAIForCommitMessage(gitContextString)
+					const generatedMessage = await this.callAIForCommitMessage(detailedContext, changes)
 					this.gitService.setCommitMessage(generatedMessage)
 
 					// Store the current context and message for future reference
@@ -91,13 +97,13 @@ export class CommitMessageProvider {
 	/**
 	 * Calls the provider to generate a commit message based on the git context.
 	 */
-	private async callAIForCommitMessage(gitContextString: string): Promise<string> {
+	private async callAIForCommitMessage(gitContextString: string, changes: GitChange[]): Promise<string> {
 		const prompt = await this.buildCommitMessagePrompt(gitContextString)
 
 		// For now, we'll use a placeholder implementation
 		// In a full implementation, this would call an AI service
 		// Return a conventional commit format message based on the changes
-		return this.generatePlaceholderCommitMessage(gitContextString)
+		return this.generateDetailedCommitMessage(changes)
 	}
 
 	/**
@@ -154,144 +160,315 @@ Return ONLY the commit message, nothing else.`
 	}
 
 	/**
-	 * Generates a placeholder commit message based on the git context.
-	 * This is a simplified implementation that can be enhanced with actual AI.
+	 * Extracts class and function names from diff content
 	 */
-	private generatePlaceholderCommitMessage(context: string): string {
-		const lines = context.split("\n")
-		const fileChanges: { path: string; status: string }[] = []
-		let hasNewFiles = false
-		let hasModifiedFiles = false
-		let hasDeletedFiles = false
+	private extractCodeElements(diff: string): { classes: string[]; functions: string[]; imports: string[] } {
+		const classes: string[] = []
+		const functions: string[] = []
+		const imports: string[] = []
 
-		for (const line of lines) {
-			if (line.startsWith("- ") && line.includes("(")) {
-				const fileInfo = line.substring(2)
-				const status = fileInfo.match(/\(([^)]+)\)$/)?.[1] || "modified"
-				const filePath = fileInfo.replace(/ \([^)]+\)$/, "")
-				fileChanges.push({ path: filePath, status })
+		// Match class definitions
+		const classRegex = /class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+([\w,\s]+))?/g
+		let match
+		while ((match = classRegex.exec(diff)) !== null) {
+			classes.push(match[1])
+		}
 
-				if (status === "untracked") {
-					hasNewFiles = true
-				} else if (status === "deleted") {
-					hasDeletedFiles = true
-				} else {
-					hasModifiedFiles = true
-				}
+		// Match function definitions
+		const funcRegex = /(?:export\s+)?(?:async\s+)?(?:function\s+)?(\w+)\s*\([^)]*\)\s*(?::\s*\w+)?\s*(?:=>|\{)/g
+		while ((match = funcRegex.exec(diff)) !== null) {
+			const funcName = match[1]
+			if (
+				!["if", "while", "for", "switch", "catch", "return", "await", "const", "let", "var"].includes(funcName)
+			) {
+				functions.push(funcName)
 			}
 		}
 
-		// Analyze file patterns to determine the nature of changes
-		const allPaths = fileChanges.map((f) => f.path.toLowerCase())
-		const newFiles = fileChanges.filter((f) => f.status === "untracked").map((f) => f.path)
-
-		// Check for specific feature patterns
-		const hasCommitRelated = allPaths.some(
-			(p) =>
-				p.includes("commit") ||
-				p.includes("git") ||
-				p.includes("message") ||
-				p.includes("CommitMessageProvider") ||
-				p.includes("GitExtensionService"),
-		)
-
-		const hasUiChanges = allPaths.some(
-			(p) =>
-				p.includes("button") || p.includes("chat.tsx") || p.includes("textarea") || p.includes("CommitButton"),
-		)
-
-		const hasI18nChanges = allPaths.some((p) => p.includes("i18n") || p.includes("locale"))
-
-		// Check for new feature based on new files
-		if (hasNewFiles && newFiles.length >= 2) {
-			// New feature implementation
-			if (hasCommitRelated && hasUiChanges) {
-				return "feat: add AI commit message generation button"
-			}
-			if (allPaths.some((p) => p.includes("test"))) {
-				const scope = this.findCommonDirectory(newFiles)
-				return scope ? `test(${scope}): add tests for ${scope}` : "test: add new test files"
-			}
-			const scope = this.findCommonDirectory(newFiles)
-			return scope ? `feat(${scope}): add ${newFiles.length} new files` : `feat: add ${newFiles.length} new files`
+		// Match import statements
+		const importRegex = /import\s+(?:\{[^}]+\}|\*\s+as\s+\w+|\w+)\s+from\s+['"]([^'"]+)['"]/g
+		while ((match = importRegex.exec(diff)) !== null) {
+			imports.push(match[1])
 		}
 
-		// Single new file with meaningful name
-		if (hasNewFiles && newFiles.length === 1) {
-			const file = newFiles[0]
-			const fileName = file.split("/").pop() || file
-			const cleanName = fileName.replace(/\.(ts|tsx|js|jsx)$/, "")
-			if (cleanName.toLowerCase().includes("commit")) {
-				return `feat: add ${cleanName} component`
-			}
-			return `feat: add ${cleanName}`
-		}
-
-		// Updates to existing files
-		const modifiedFiles = fileChanges.filter((f) => f.status !== "untracked").map((f) => f.path)
-
-		// Extension/integration changes
-		if (modifiedFiles.some((f) => f.includes("extension.ts") || f.includes("webviewMessageHandler"))) {
-			if (hasCommitRelated) {
-				return "feat: integrate commit message provider with extension"
+		// Match React component definitions
+		const componentRegex = /(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:React\.)?(?:forwardRef|memo)/g
+		while ((match = componentRegex.exec(diff)) !== null) {
+			const compName = match[1]
+			if (compName[0] === compName[0].toUpperCase() && !classes.includes(compName)) {
+				classes.push(compName)
 			}
 		}
 
-		// UI component updates
-		if (hasUiChanges && !hasNewFiles) {
-			const scope = this.findCommonDirectory(modifiedFiles)
-			if (scope) {
-				return `refactor(${scope}): update UI components in ${scope}`
-			}
-		}
+		return { classes: [...new Set(classes)], functions: [...new Set(functions)], imports: [...new Set(imports)] }
+	}
 
-		// I18n only changes
-		if (hasI18nChanges && !hasUiChanges && !hasCommitRelated) {
-			return "chore(i18n): add translations for new features"
-		}
+	/**
+	 * Determines what type of change this is based on file content
+	 */
+	private determineChangeType(changes: GitChange[]): {
+		type: string
+		scope: string
+		isNewFeature: boolean
+		isBugFix: boolean
+		isRefactor: boolean
+		isUiUpdate: boolean
+	} {
+		const allPaths = changes.map((c) => c.filePath.toLowerCase())
+		const newFiles = changes.filter((c) => c.status === "untracked")
+		const modifiedFiles = changes.filter((c) => c.status !== "untracked")
 
-		// General fallback with more context
-		if (hasDeletedFiles && !hasNewFiles && !hasModifiedFiles) {
-			return `chore: remove ${fileChanges.length} file${fileChanges.length > 1 ? "s" : ""}`
-		}
-
-		if (hasNewFiles && hasModifiedFiles) {
-			const scope = this.findCommonDirectory(allPaths)
-			return scope
-				? `feat(${scope}): add feature with ${newFiles.length} new and ${modifiedFiles.length} updated files`
-				: `feat: add ${newFiles.length} new files and update ${modifiedFiles.length} files`
-		}
-
-		// Determine type from file patterns
-		let type = "chore"
 		let scope = ""
+		let isNewFeature = newFiles.length > 0
+		let isBugFix = false
+		let isRefactor = false
+		let isUiUpdate = false
+
+		// Check for UI components
+		if (allPaths.some((p) => /\.(tsx|jsx|vue)$/.test(p) || p.includes("component"))) {
+			isUiUpdate = true
+		}
+
+		// Check for bug fix patterns in diffs
+		const allDiffs = changes.map((c) => c.diff || "").join("\n")
+		if (allDiffs.includes("fix") || allDiffs.includes("bug") || allDiffs.includes("error")) {
+			isBugFix = true
+		}
+
+		// Determine scope from common directory
+		const commonDir = this.findCommonDirectory(changes.map((c) => c.filePath))
+		scope = commonDir
+
+		// Determine type
+		let type = "chore"
+		if (newFiles.length > 0 && modifiedFiles.length === 0) {
+			type = "feat"
+		} else if (isBugFix) {
+			type = "fix"
+		} else if (isRefactor) {
+			type = "refactor"
+		} else if (allPaths.some((p) => p.includes("test"))) {
+			type = "test"
+		} else if (allPaths.some((p) => p.includes("docs"))) {
+			type = "docs"
+		} else if (modifiedFiles.length > 0 && newFiles.length === 0) {
+			type = isUiUpdate ? "refactor" : "fix"
+		}
+
+		return { type, scope, isNewFeature, isBugFix, isRefactor, isUiUpdate }
+	}
+
+	/**
+	 * Generates a detailed commit message with implementation details
+	 */
+	private generateDetailedCommitMessage(changes: GitChange[]): string {
+		const { type, scope, isNewFeature } = this.determineChangeType(changes)
+		const newFiles = changes.filter((c) => c.status === "untracked")
+		const modifiedFiles = changes.filter((c) => c.status !== "untracked")
+
+		// Extract code elements from all diffs with file context
+		const fileElements: { file: string; classes: string[]; functions: string[] }[] = []
+		let allClasses: string[] = []
+		let allFunctions: string[] = []
+
+		for (const change of changes) {
+			if (change.diff) {
+				const elements = this.extractCodeElements(change.diff)
+				const fileName = change.filePath.split("/").pop() || change.filePath
+				fileElements.push({
+					file: fileName,
+					classes: elements.classes,
+					functions: elements.functions,
+				})
+				allClasses = [...allClasses, ...elements.classes]
+				allFunctions = [...allFunctions, ...elements.functions]
+			}
+		}
+
+		// Remove duplicates
+		allClasses = [...new Set(allClasses)]
+		allFunctions = [...new Set(allFunctions)].filter((f) => !allClasses.includes(f))
+
+		// Build detailed description
 		let description = ""
 
-		const firstFile = fileChanges[0]?.path || ""
-		if (firstFile.includes("test")) {
-			type = "test"
-			scope = firstFile.includes("/") ? firstFile.split("/")[0] : ""
-		} else if (firstFile.includes("docs")) {
-			type = "docs"
-		} else if (firstFile.match(/\.(tsx?|jsx?)$/)) {
-			type = hasNewFiles ? "feat" : "refactor"
-		} else if (firstFile.match(/\.css$/)) {
-			type = "style"
-		} else if (hasNewFiles) {
-			type = "feat"
-		} else {
-			type = "fix"
+		if (isNewFeature && newFiles.length > 0) {
+			// New feature with implementation details
+			if (allClasses.length > 0) {
+				const mainClass = allClasses[0]
+				const implDetails = this.describeImplementation(allClasses.slice(0, 2), allFunctions.slice(0, 3))
+				description = implDetails
+			} else if (allFunctions.length > 0) {
+				description = this.describeFunctions(allFunctions.slice(0, 3))
+			} else {
+				description = `add ${newFiles.length} new file${newFiles.length > 1 ? "s" : ""}`
+			}
+		} else if (modifiedFiles.length > 0) {
+			// Modifications with details about what changed
+			if (allFunctions.length > 0) {
+				description = this.describeFunctionChanges(allFunctions.slice(0, 3), type)
+				if (allClasses.length > 0) {
+					description += ` in ${allClasses[0]}`
+				}
+			} else if (allClasses.length > 0) {
+				description = this.describeClassChanges(allClasses.slice(0, 2), type)
+			} else {
+				description = this.describeFileChanges(modifiedFiles.length, scope, type)
+			}
 		}
 
-		if (fileChanges.length === 1) {
-			description = `update ${firstFile.split("/").pop() || firstFile}`
-		} else {
-			const commonDir = this.findCommonDirectory(fileChanges.map((f) => f.path))
-			scope = commonDir
-			description = `update ${fileChanges.length} files${commonDir ? ` in ${commonDir}` : ""}`
+		// Add scope if available
+		if (scope) {
+			return `${type}(${scope}): ${description}`
+		}
+		return `${type}: ${description}`
+	}
+
+	/**
+	 * Describes the implementation details of classes and functions
+	 */
+	private describeImplementation(classes: string[], functions: string[]): string {
+		if (classes.length === 0 && functions.length === 0) {
+			return "update implementation"
 		}
 
-		return scope ? `${type}(${scope}): ${description}` : `${type}: ${description}`
+		const classDesc = classes.map((c) => this.inferClassPurpose(c))
+		const funcDesc = functions.map((f) => this.inferFunctionPurpose(f))
+
+		if (classes.length > 0 && functions.length > 0) {
+			return `implement ${classDesc.join(", ")} with ${funcDesc.join(", ")}`
+		} else if (classes.length > 0) {
+			return `implement ${classDesc.join(", ")}`
+		} else {
+			return `add ${funcDesc.join(", ")}`
+		}
+	}
+
+	/**
+	 * Describes what functions do
+	 */
+	private describeFunctions(functions: string[]): string {
+		if (functions.length === 0) return "update code"
+		const purposes = functions.map((f) => this.inferFunctionPurpose(f))
+		return `implement ${purposes.join(", ")}`
+	}
+
+	/**
+	 * Describes changes to functions
+	 */
+	private describeFunctionChanges(functions: string[], type: string): string {
+		if (functions.length === 0) return "update code"
+		const purposes = functions.map((f) => this.inferFunctionPurpose(f))
+		const action = type === "fix" ? "fix" : type === "refactor" ? "refactor" : "update"
+		return `${action} ${purposes.join(", ")}`
+	}
+
+	/**
+	 * Describes changes to classes
+	 */
+	private describeClassChanges(classes: string[], type: string): string {
+		if (classes.length === 0) return "update code"
+		const purposes = classes.map((c) => this.inferClassPurpose(c))
+		const action = type === "fix" ? "fix" : type === "refactor" ? "refactor" : "update"
+		return `${action} ${purposes.join(", ")}`
+	}
+
+	/**
+	 * Describes file-level changes
+	 */
+	private describeFileChanges(count: number, scope: string, type: string): string {
+		const action = type === "fix" ? "fix" : type === "refactor" ? "refactor" : "update"
+		if (count === 1) {
+			return `${action} file${scope ? ` in ${scope}` : ""}`
+		}
+		return `${action} ${count} files${scope ? ` in ${scope}` : ""}`
+	}
+
+	/**
+	 * Infers the purpose of a class from its name
+	 */
+	private inferClassPurpose(className: string): string {
+		const patterns: [RegExp, string][] = [
+			[/Provider$/, `${className} for service integration`],
+			[/Service$/, `${className} for business logic`],
+			[/Controller$/, `${className} for request handling`],
+			[/Component$/, `${className} UI component`],
+			[/Button$/, `${className} interactive element`],
+			[/View$/, `${className} display component`],
+			[/Handler$/, `${className} for event processing`],
+			[/Extension$/, `${className} for VS Code integration`],
+			[/Manager$/, `${className} for state management`],
+			[/Utils?$/, `${className} utility functions`],
+			[/Helper$/, `${className} helper methods`],
+		]
+
+		for (const [pattern, description] of patterns) {
+			if (pattern.test(className)) {
+				return description
+			}
+		}
+
+		// Default descriptions based on naming patterns
+		if (/^[A-Z]/.test(className)) {
+			return `${className} class`
+		}
+
+		return className
+	}
+
+	/**
+	 * Infers the purpose of a function from its name
+	 */
+	private inferFunctionPurpose(funcName: string): string {
+		const patterns: [RegExp, string][] = [
+			[/^handle[A-Z]/, funcName.replace(/^handle/, "").toLowerCase() + " handler"],
+			[/^get[A-Z]/, funcName.replace(/^get/, "").toLowerCase() + " getter"],
+			[/^set[A-Z]/, funcName.replace(/^set/, "").toLowerCase() + " setter"],
+			[/^is[A-Z]/, funcName.replace(/^is/, "").toLowerCase() + " check"],
+			[/^has[A-Z]/, funcName.replace(/^has/, "").toLowerCase() + " validation"],
+			[/^can[A-Z]/, funcName.replace(/^can/, "").toLowerCase() + " permission check"],
+			[/^should[A-Z]/, funcName.replace(/^should/, "").toLowerCase() + " condition check"],
+			[/^validate/, "validation logic"],
+			[/^extract/, "data extraction"],
+			[/^parse/, "parsing logic"],
+			[/^format/, "formatting logic"],
+			[/^convert/, "data conversion"],
+			[/^transform/, "data transformation"],
+			[/^generate/, "generation logic"],
+			[/^create/, "creation logic"],
+			[/^update/, "update logic"],
+			[/^delete/, "deletion logic"],
+			[/^remove/, "removal logic"],
+			[/^add/, "addition logic"],
+			[/^initialize/, "initialization"],
+			[/^init/, "initialization"],
+			[/^setup/, "setup logic"],
+			[/^cleanup/, "cleanup logic"],
+			[/^dispose/, "resource disposal"],
+			[/^render/, "rendering logic"],
+			[/^build/, "building logic"],
+			[/^compute/, "computation"],
+			[/^calculate/, "calculation"],
+			[/^fetch/, "data fetching"],
+			[/^load/, "data loading"],
+			[/^save/, "data saving"],
+			[/^send/, "data sending"],
+			[/^post/, "POST request"],
+			[/^process/, "processing logic"],
+			[/^execute/, "execution logic"],
+			[/^run/, "execution logic"],
+			[/^start/, "startup logic"],
+			[/^stop/, "shutdown logic"],
+		]
+
+		for (const [pattern, description] of patterns) {
+			if (pattern.test(funcName)) {
+				return description
+			}
+		}
+
+		// Return function name as-is if no pattern matches
+		return `${funcName}()`
 	}
 
 	/**
@@ -299,7 +476,10 @@ Return ONLY the commit message, nothing else.`
 	 */
 	private findCommonDirectory(paths: string[]): string {
 		if (paths.length === 0) return ""
-		if (paths.length === 1) return paths[0].includes("/") ? paths[0].split("/")[0] : ""
+		if (paths.length === 1) {
+			const parts = paths[0].split("/")
+			return parts.length > 1 ? parts[0] : ""
+		}
 
 		const parts = paths.map((p) => p.split("/"))
 		const minLength = Math.min(...parts.map((p) => p.length))
